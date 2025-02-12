@@ -1,2 +1,10 @@
 ---
-
+pia_base_dir: '/opt/Private Internet Access/vpn'
+pia_endpoints_dir: "{{ pia_base_dir }}/share/endpoints"
+pia_certs_dir: "{{ pia_base_dir }}/share/certs"
+pia_download_url: 'https://www.privateinternetaccess.com/openvpn/openvpn.zip'
+pia_conf_zip_file: "{{ pia_base_dir }}/share/openvpn.zip"
+pia_credentials_file: "/etc/openvpn/credentials-pia"
+pia_endpoint_udp_port: 1198
+pia_endpoint_cipher: 'aes-128-cbc'
+pie_defaukt_profile_name: 'pia-default'

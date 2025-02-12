@@ -1,2 +1,100 @@
 ---
-
+- name: 'Load distro specific variables'
+  ansible.builtin.include_vars:
+    file: "{{ ansible_facts['os_family'] }}.yml"
+- name: "Installing depenencies packages"
+  ansible.builtin.package:
+    name: "{{ pia_dependency_packages }}"
+    state: "present"
+- name: "Deploying PIA VPN"
+  block:
+    - name: "Creating temp working directory"
+      ansible.builtin.tempfile:
+        state: 'directory'
+      register: workdir
+      changed_when: false
+    - name: "Download PIA VPN zip file"
+      ansible.builtin.get_url:
+        url: "https://privateinternetaccess.com/openvpn/openvpn.zip"
+        dest: "{{ workdir.path }}/pia_vpn.zip"
+        mode: "600"
+      changed_when: false
+    - name: "Creating base directory"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: 'directory'
+        owner: 0
+        group: 0
+        mode: "755"
+        recurse: true
+      loop:
+        - "{{ pia_endpoints_dir }}"
+        - "{{ pia_certs_dir }}"
+    - name: "Loading update tasks"
+      ansible.builtin.include_tasks:
+        file: "update.yml"
+      vars:
+        pia_update_workdir: "{{ workdir }}"
+    - name: "Deploying OpenVPN credentials file with PIA credentials"
+      ansible.builtin.template:
+        src: openvpn-creds.j2
+        dest: "{{ pia_credentials_file }}"
+        owner: 0
+        group: 0
+        mode: "600"
+    - name: "Getting stale customized OpenVPN config files"
+      ansible.builtin.find:
+        path: "{{ pia_ovpn_conf_d_dir }}"
+        pattern: "pia-*.conf"
+      register: stale_custom_ovpn_cfgs
+    - name: "Removing stale customized OpenVPN config files"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: "absent"
+      check_mode: false
+      loop: "{{ stale_custom_ovpn_cfgs.files }}"
+      changed_when: false
+      when: stale_custom_ovpn_cfgs.files | length > 0
+    - name: "Getting config files to be customized from stock"
+      ansible.builtin.find:
+        path: "{{ pia_endpoints_dir }}"
+        pattern: "{{ pia_endpoints | default('*.ovpn') }}"
+      register: ovpn_stock_cfgs
+    - name: "Copying stock config files to customized"
+      ansible.builtin.copy:
+        src: "{{ item.path }}"
+        dest: "{{ pia_ovpn_conf_d_dir }}/pia-{{ item.path | basename | regex_replace('\\.ovpn$','.conf') }}"
+        mode: "644"
+        owner: 0
+        group: 0
+        remote_src: true
+      loop: "{{ ovpn_stock_cfgs.files }}"
+      when: ovpn_stock_cfgs.files | length > 0
+    - name: "Getting customized endpoint list"
+      ansible.builtin.find:
+        path: "{{ pia_ovpn_conf_d_dir }}"
+        pattern: "pia-*.conf"
+      register: pia_customized_ovpn_files
+    - debug:
+        msg: pia_customized_ovpn_files.files
+    - name: "Adding username to custom ovpn config"
+      ansible.builtin.replace:
+        path: "{{ item.path }}"
+        regexp: "^\\s*auth-user-pass\\s+.*$"
+        replace: "auth-user-pass \"{{ pia_credentials_file }}\""
+      loop: "{{ pia_customized_ovpn_files.files }}"
+      changed_when: false
+      when: pia_customized_ovpn_files.files | length > 0
+    - name: "Updating UDP port to custom ovpn config"
+      ansible.builtin.replace:
+        path: "{{ item.path }}"
+        regexp: "{{ pia_remote_regex }}"
+        replace: "remote \\1 {{ pia_endpoint_udp_port }}"
+      loop: "{{ pia_customized_ovpn_files.files }}"
+      when: pia_customized_ovpn_files.files | length > 0
+  always:
+    - name: "Clean up workdir directory"
+      ansible.builtin.file:
+        path: "{{ workdir.path }}/"
+        state: "absent"
+      changed_when: false

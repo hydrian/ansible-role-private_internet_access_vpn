@@ -1,0 +1,48 @@
+---
+- name: "Updating PIA openvpn configuration file"
+  ansible.builtin.copy:
+    src: "{{ pia_update_workdir.path }}/pia_vpn.zip"
+    dest: "{{ pia_conf_zip_file }}"
+    owner: 0
+    group: 0
+    mode: "644"
+    remote_src: true
+- name: "Creating temp zip dir"
+  ansible.builtin.file:
+    path: "{{ pia_update_workdir.path }}/zip"
+    state: "directory"
+    mode: "700"
+- name: "Extracting zip file content"
+  ansible.builtin.unarchive:
+    src: "{{ pia_conf_zip_file }}"
+    dest: "{{ pia_update_workdir.path }}/zip"
+    remote_src: true
+- name: "Getting OpenVPN configurations"
+  ansible.builtin.find:
+    path: "{{ pia_update_workdir.path }}/zip"
+    pattern: '*.ovpn'
+  register: ovpn_stock_cfgs
+- name: 'Getting stale stock configuration files'
+  ansible.builtin.find:
+    path: "{{ pia_endpoints_dir }}"
+    pattern: '*.ovpn'
+  register: stale_stock_ovpn_cfgs
+- name: 'Removing stale stock configuration files'
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: 'absent'
+  changed_when: false
+  check_mode: false
+  loop: "{{ stale_stock_ovpn_cfgs.files }}"
+  when: stale_stock_ovpn_cfgs.files | length > 0
+- name: "Copying endpoint configurations"
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "{{ pia_endpoints_dir }}/{{ item.path | basename }}"
+    mode: "644"
+    owner: 0
+    group: 0
+    remote_src: true
+  loop: "{{ ovpn_stock_cfgs.files }}"
+  check_mode: false
+  when:  ovpn_stock_cfgs.files|length > 0  
