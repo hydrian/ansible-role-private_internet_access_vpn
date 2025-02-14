@@ -7,4 +7,6 @@ pia_conf_zip_file: "{{ pia_base_dir }}/share/openvpn.zip"
 pia_credentials_file: "/etc/openvpn/credentials-pia"
 pia_endpoint_udp_port: 1198
 pia_endpoint_cipher: 'aes-128-cbc'
-pie_defaukt_profile_name: 'pia-default'
+pia_default_profile_name: 'pia-default'
+pia_customized_prefix: 'pia'
+pia_start_on_boot: false
