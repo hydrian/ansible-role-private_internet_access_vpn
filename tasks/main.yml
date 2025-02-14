@@ -63,7 +63,7 @@
     - name: "Copying stock config files to customized"
       ansible.builtin.copy:
         src: "{{ item.path }}"
-        dest: "{{ pia_ovpn_conf_d_dir }}/pia-{{ item.path | basename | regex_replace('\\.ovpn$','.conf') }}"
+        dest: "{{ pia_ovpn_conf_d_dir }}/pia-{{ item.path | basename | regex_replace('\\.ovpn$', '.conf') }}"
         mode: "644"
         owner: 0
         group: 0
@@ -74,9 +74,7 @@
       ansible.builtin.find:
         path: "{{ pia_ovpn_conf_d_dir }}"
         pattern: "pia-*.conf"
-      register: pia_customized_ovpn_files
-    - debug:
-        msg: pia_customized_ovpn_files.files
+      register: pia_customized_ovpn_file
     - name: "Adding username to custom ovpn config"
       ansible.builtin.replace:
         path: "{{ item.path }}"
@@ -92,6 +90,22 @@
         replace: "remote \\1 {{ pia_endpoint_udp_port }}"
       loop: "{{ pia_customized_ovpn_files.files }}"
       when: pia_customized_ovpn_files.files | length > 0
+    - name: "Setting default endpoint"
+      ansible.builtin.file:
+        state: 'link'
+        src: "{{ pia_ovpn_conf_d_dir }}/{{ pia_customized_prefix }}-{{ pia_endpoint }}.conf"
+        dest: "{{ pia_ovpn_conf_d_dir }}/{{ pia_default_profile_name }}.conf"
+        mode: '644'
+        owner: 0
+        group: 0
+      when: pia_endpoint is defined
+    - name: "Configuring PIA VPN to start at boot"
+      ansible.builtin.service:
+        name: "{{ pia_service_name }}@{{ pia_default_profile_name }}.service"
+        enabled: "{{ pia_start_at_boot | bool }}"
+      when:
+        - pia_start_at_boot is defined
+        - pia_endpoint is defined
   always:
     - name: "Clean up workdir directory"
       ansible.builtin.file:
