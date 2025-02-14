@@ -1,2 +1,16 @@
 ---
-
+galaxy_info:
+  role_name: 'private_internet_access_vpn'
+  version: '0.99.0'
+  readme: 'README.md'
+  authors:
+    - 'Ben Tyger <ben.tyger@tygerclan.net>'
+  repository: 'https://github.com/hydrian/ansible_role_private_internet_access_vpn'
+  description: >
+    Ansible role to deploy Private Internet Access's openvpn implementation without their client
+  galaxy_tags:
+    - 'pia'
+    - 'openvpn'
+    - 'private_internet_access'
+    - 'vpn'
+    - 'role'
