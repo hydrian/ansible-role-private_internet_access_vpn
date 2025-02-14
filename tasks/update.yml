@@ -45,4 +45,4 @@
     remote_src: true
   loop: "{{ ovpn_stock_cfgs.files }}"
   check_mode: false
-  when:  ovpn_stock_cfgs.files|length > 0  
+  when: ovpn_stock_cfgs.files | length > 0
