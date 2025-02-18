@@ -5,4 +5,3 @@ pia_dependency_packages:
   - 'diffutils'
   - 'openvpn'
   - 'unzip'
-
